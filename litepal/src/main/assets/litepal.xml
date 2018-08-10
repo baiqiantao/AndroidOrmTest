@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<litepal>
+    <dbname value="demo"/>
+    <version value="3"/>
+    <list>
+        <mapping class="com.bqt.test.litepal.Album"/>
+    </list>
+    <storage value="internal"/>
+</litepal>
