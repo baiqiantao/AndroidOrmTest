@@ -7,19 +7,17 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
+import com.bqt.test.greendao.GreenDaoActivity;
 import com.bqt.test.litepal.LitePalActivity;
 
 import java.util.Arrays;
 
 public class MainActivity extends ListActivity {
-	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		String[] array = {"LitePal",
-				"",
-				"",
-				"",
+				"GreenDao",
 				"",};
 		setListAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, Arrays.asList(array)));
 	}
@@ -31,10 +29,9 @@ public class MainActivity extends ListActivity {
 				startActivity(new Intent(this, LitePalActivity.class));
 				break;
 			case 1:
-	
+				startActivity(new Intent(this, GreenDaoActivity.class));
 				break;
 			case 2:
-				
 				break;
 			default:
 				break;
