@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import com.google.gson.Gson;
 
+import org.greenrobot.greendao.Property;
 import org.greenrobot.greendao.database.Database;
 import org.greenrobot.greendao.query.QueryBuilder;
 import org.greenrobot.greendao.query.WhereCondition;
@@ -156,17 +157,18 @@ public class GreenDaoActivity extends ListActivity {
 		WhereCondition cond2 = NoteDao.Properties.Type.notEq(NoteTypeConverter.TYPE_UNKNOWN);//!=
 		WhereCondition cond3 = NoteDao.Properties.Id.gt(10);//大于
 		WhereCondition cond4 = NoteDao.Properties.Id.le(5);// less and eq 小于等于
-		WhereCondition cond5 = NoteDao.Properties.Id.in(1, 4, 10, 12);//在某些值内，notIn	不在某些值内
+		WhereCondition cond5 = NoteDao.Properties.Id.in(1, 4, 10);//可以是集合。在某些值内，notIn	不在某些值内
 		WhereCondition cond6 = NoteDao.Properties.Text.like("%【%");//包含
 		// 最常用Like通配符：下划线_代替一个任意字符(相当于正则表达式中的 ?)   百分号%代替任意数目的任意字符(相当于正则表达式中的 *)
 		WhereCondition cond7 = NoteDao.Properties.Date.between(System.currentTimeMillis() - 1000 * 60 * 20, new Date());//20分钟
+		WhereCondition cond8 = NoteDao.Properties.Date.isNotNull();//isNull
 		
 		List<Note> list = null;
 		if (tag % 9 >= 6) {
 			QueryBuilder<Note> qb = dao.queryBuilder();
 			WhereCondition condOr = qb.or(cond2, cond3, cond4);
 			WhereCondition condAnd = qb.and(cond5, cond6, cond7);
-			list = qb.where(cond1, condOr, condAnd).build().list();
+			list = qb.where(cond8, condOr, condAnd).build().list();
 		} else if (tag % 9 == 5) list = dao.queryBuilder().whereOr(cond5, cond6, cond7).build().list();//多个语句间是 OR 的关系
 		else if (tag % 9 == 4) list = dao.queryBuilder().where(cond5, cond6, cond7).build().list();//多个语句间是 AND 的关系
 		else if (tag % 9 == 3) list = dao.queryBuilder().where(cond4).offset(1).limit(2).build().list();//(必须)与limit一起设置查询结果的偏移量
@@ -206,10 +208,20 @@ public class GreenDaoActivity extends ListActivity {
 	
 	private void testOtherApi() {
 		//查找指定实体的Key，当指定实体在数据库表中不存在时返回 null(而不是返回-1或其他值)
-		Log.i("bqt", dao.getKey(mNote) + "  " + dao.getKey(Note.newBuilder().text("text").build()));
-		//执行原生的查询
-		List<Note> list = dao.queryRaw("select * from BQT_USERS where id= '2'");
-		Log.i("bqt", new Gson().toJson(list));
+		Log.i("bqt", "实体的Key = " + dao.getKey(mNote) + "  " + dao.getKey(Note.newBuilder().text("text").build()));
+		
+		Property pk = dao.getPkProperty();//id	_id	0	true	class java.lang.Long
+		for (Property p : dao.getProperties()) {
+			Log.i("bqt", p.name + "\t" + p.columnName + "\t" + p.ordinal + "\t" + p.primaryKey + "\t" + p.type + "\t" + (p == pk));
+		}
+		Log.i("bqt", "所有的PK列：" + Arrays.toString(dao.getPkColumns()));//[_id]
+		Log.i("bqt", "所有的非PK列：" + Arrays.toString(dao.getNonPkColumns()));//[TEXT, TIME, TYPE]
+		
+		Log.i("bqt", dao.getDatabase().toString());
+		
+		//执行原生的SQL查询语句
+		//List<Note> list = dao.queryRaw("select * from Note");
+		//Log.i("bqt", new Gson().toJson(list));
 	}
 	
 	private String getAllDataString() {
