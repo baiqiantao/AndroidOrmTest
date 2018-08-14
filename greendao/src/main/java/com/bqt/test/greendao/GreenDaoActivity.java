@@ -35,7 +35,7 @@ public class GreenDaoActivity extends ListActivity {
 				"3、删除数据：delete、deleteAll、deleteByKey、deleteByKeyInTx、deleteInTx",
 				"4、更新数据：update、updateInTx、updateKeyAfterInsert",
 				"5、查询数据：where、whereOr、limit、offset、*order*、distinct、or、and",
-				"6、加载数据：load、loadByRowId、loadAll",
+				"6、数据加载和缓存：load、loadByRowId、loadAll、detach、detachAll、unique",
 				"7、其他API：",
 				"8、删除所有数据：deleteAll",
 				"tag 值 +1",};
@@ -85,7 +85,7 @@ public class GreenDaoActivity extends ListActivity {
 				query();
 				break;
 			case 6:
-				load();
+				loadAndDetach();
 				break;
 			case 7:
 				testOtherApi();
@@ -101,7 +101,7 @@ public class GreenDaoActivity extends ListActivity {
 				(tag % 3 == 1 ? NoteType.PICTURE : NoteType.TEXT))
 				.comment("comment" + tag).date(new Date()).text("text" + tag).build();
 		long insertId = dao.insert(insertNote);// 将给定的实体插入数据库，默认情况下，插入的数据的Id将从1开始递增
-		Log.i("bqt", "插入数据的ID= " + insertId + " 全部数据" + getAllDataString());
+		Log.i("bqt", "插入数据的ID= " + insertId + getAllDataString());
 	}
 	
 	private void insert() {
@@ -113,7 +113,7 @@ public class GreenDaoActivity extends ListActivity {
 		else if (tag % 9 == 2) id = dao.insert(Note.newBuilder().text("text2").type(NoteType.UNKNOWN).build());//id = 11
 		else if (tag % 9 == 1) id = dao.insert(Note.newBuilder().id(10L).text("text1").build());//插入的数据的Id将从最大值开始
 		else if (tag % 9 == 0) id = dao.insert(Note.newBuilder().id(-2L).text("text0").build());//id =-2，并不限制id的值
-		Log.i("bqt", "插入数据的ID= " + id + " 全部数据" + getAllDataString());
+		Log.i("bqt", "插入数据的ID= " + id + getAllDataString());
 	}
 	
 	private void inserts() {
@@ -137,7 +137,7 @@ public class GreenDaoActivity extends ListActivity {
 		else if (tag % 9 == 2) dao.insertInTx(Arrays.asList(note1, note2), false);//并设置是否设定主键(不明白含义)
 		else if (tag % 9 == 1) dao.insertInTx(Arrays.asList(note1, note2));// 使用事务操作，将给定的实体集合插入数据库
 		else if (tag % 9 == 0) dao.insertInTx(note1, note2);// 使用事务操作，将给定的实体集合插入数据库
-		Log.i("bqt", "全部数据" + getAllDataString());
+		Log.i("bqt", getAllDataString());
 	}
 	
 	private void deletes() {
@@ -149,7 +149,7 @@ public class GreenDaoActivity extends ListActivity {
 		else if (tag % 9 == 2) dao.deleteInTx(new Note(), new Note());// 使用事务操作删除数据库中给定实体集合中的实体
 		else if (tag % 9 == 1) dao.deleteInTx(Arrays.asList(new Note(), new Note()));
 		else if (tag % 9 == 0) dao.deleteInTx(dao.queryBuilder().limit(1).list());
-		Log.i("bqt", "全部数据" + getAllDataString());
+		Log.i("bqt", getAllDataString());
 	}
 	
 	private void query() {
@@ -167,8 +167,8 @@ public class GreenDaoActivity extends ListActivity {
 		if (tag % 9 >= 6) {
 			QueryBuilder<Note> qb = dao.queryBuilder();
 			WhereCondition condOr = qb.or(cond2, cond3, cond4);
-			WhereCondition condAnd = qb.and(cond5, cond6, cond7);
-			list = qb.where(cond8, condOr, condAnd).build().list();
+			WhereCondition condAnd = qb.and(cond6, cond7, cond8);
+			list = qb.where(cond1, condOr, condAnd).build().list();
 		} else if (tag % 9 == 5) list = dao.queryBuilder().whereOr(cond5, cond6, cond7).build().list();//多个语句间是 OR 的关系
 		else if (tag % 9 == 4) list = dao.queryBuilder().where(cond5, cond6, cond7).build().list();//多个语句间是 AND 的关系
 		else if (tag % 9 == 3) list = dao.queryBuilder().where(cond4).offset(1).limit(2).build().list();//(必须)与limit一起设置查询结果的偏移量
@@ -177,7 +177,7 @@ public class GreenDaoActivity extends ListActivity {
 				.orderAsc(NoteDao.Properties.Type, NoteDao.Properties.Date, NoteDao.Properties.Text)//常用升序orderAsc、降序orderDesc
 				.build().list();//其他排序API：orderRaw(使用原生的SQL语句)、orderCustom、stringOrderCollation、preferLocalizedStringOrder
 		else if (tag % 9 == 0) list = dao.queryBuilder().build().list();
-		Log.i("bqt", "全部数据" + getAllDataString() + "\n查询到的数据" + new Gson().toJson(list));
+		Log.i("bqt", getAllDataString() + "\n查询到的数据" + new Gson().toJson(list));
 	}
 	
 	private void updates() {
@@ -196,28 +196,40 @@ public class GreenDaoActivity extends ListActivity {
 			updateNote.setText("【Text-update1】");
 			dao.updateInTx(updateNote, mNote);// 使用事务操作，更新给定的实体
 		} else if (tag % 9 == 0) dao.update(mNote);//更新给定的实体，不管有没有变化，只需用新的实体内容替换旧的内容即可(必须是同一实体)
-		Log.i("bqt", "全部数据" + getAllDataString());
+		Log.i("bqt", getAllDataString());
 	}
 	
-	private void load() {
-		Note note1 = dao.load(1L);
-		Note note2 = dao.load(10086L);
-		Note note3 = dao.loadByRowId(1L);
-		Log.i("bqt", new Gson().toJson(Arrays.asList(note1, note2, note3)));
+	private void loadAndDetach() {
+		Note note1 = dao.load(1L);// 加载给定主键的实体
+		Note note2 = dao.load(10086L);//如果给定主键不存在则返回null
+		Note note3 = dao.loadByRowId(1L);// 加载某一行并返回该行的实体
+		Note note4 = dao.queryBuilder().limit(1).unique();//返回一个元素(可能为null)。要多次执行查询，应该保留query对象以提高效率
+		Note note5 = dao.queryBuilder().limit(1).build().unique();//和上面的操作是一样的。注意：如果查询结果数量不是1，则报 DaoException
+		if (tag % 9 >= 2) {
+			note1.setText("-------Text" + System.currentTimeMillis());
+			Log.i("bqt", dao.load(1L).getText());//因为这里获取到的实体对象仍然是 note1 ，所以这里的值立即就改变了！
+			dao.detachAll();//清除指定实体缓存，将会重新从数据库中查询，然后封装成新的对象
+			Log.i("bqt", dao.load(1L).getText());//因为只更改了实体但没有调用更新数据库的方法，所以数据库中的数据并没有改变
+		} else if (tag % 9 == 1) {
+			dao.detach(note4);//清除指定实体缓存；dao.detachAll 清除当前表的所有实体缓存；daoSession.clear() 清除所有的实体缓存
+			Note note6 = dao.load(1L);// 清除指定Dao类的缓存后，再次得到的实体就是构造的新的对象
+			Log.i("bqt", (note1 == note3 && note1 == note4 && note1 == note5) + "  " + (note1 == note6));//true  false
+		} else if (tag % 9 == 0) {
+			Log.i("bqt", new Gson().toJson(Arrays.asList(note1, note2, note3, note4, note5)));
+		}
 	}
 	
 	private void testOtherApi() {
 		//查找指定实体的Key，当指定实体在数据库表中不存在时返回 null(而不是返回-1或其他值)
-		Log.i("bqt", "实体的Key = " + dao.getKey(mNote) + "  " + dao.getKey(Note.newBuilder().text("text").build()));
+		Log.i("bqt", "实体的 Key = " + dao.getKey(mNote) + "  " + dao.getKey(Note.newBuilder().text("text").build()));
 		
 		Property pk = dao.getPkProperty();//id	_id	0	true	class java.lang.Long
 		for (Property p : dao.getProperties()) {
 			Log.i("bqt", p.name + "\t" + p.columnName + "\t" + p.ordinal + "\t" + p.primaryKey + "\t" + p.type + "\t" + (p == pk));
 		}
+		
 		Log.i("bqt", "所有的PK列：" + Arrays.toString(dao.getPkColumns()));//[_id]
 		Log.i("bqt", "所有的非PK列：" + Arrays.toString(dao.getNonPkColumns()));//[TEXT, TIME, TYPE]
-		
-		Log.i("bqt", dao.getDatabase().toString());
 		
 		//执行原生的SQL查询语句
 		//List<Note> list = dao.queryRaw("select * from Note");
@@ -225,6 +237,6 @@ public class GreenDaoActivity extends ListActivity {
 	}
 	
 	private String getAllDataString() {
-		return new Gson().toJson(dao.loadAll()); //dao.loadAll() 等价于 dao.queryBuilder().build().list()
+		return " 个数：" + dao.count() + "，全部数据" + new Gson().toJson(dao.loadAll()); //loadAll() 等价于 queryBuilder().build().list()
 	}
 }
