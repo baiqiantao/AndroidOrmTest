@@ -34,8 +34,7 @@ public class Note {
 	@Property(nameInDb = "TIME") //为该属性在数据库中映射的字段名设置一个非默认的名称
 	private Date date;
 	
-	@Convert(converter = NoteTypeConverter.class, columnType = String.class) //自定义参数类型
-	// converter 为类型转换类，columnType 为自定义的类型在数据库中存储的类型
+	@Convert(converter = NoteTypeConverter.class, columnType = String.class) //类型转换类，自定义的类型在数据库中存储的类型
 	private NoteType type; //在保存到数据库时会将自定义的类型 NoteType 通过 NoteTypeConverter 转换为 String 类型。反之亦然
 	
 	/**

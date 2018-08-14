@@ -31,12 +31,12 @@ public class GreenDaoActivity extends ListActivity {
 		super.onCreate(savedInstanceState);
 		String[] array = {"0、插入一条数据",
 				"1、演示 insert 数据时一些特殊情况",
-				"2、插入数据：insertInTx、insertWithoutSettingPk、insertOrReplace、save、saveInTx",
+				"2、插入数据：insertInTx、insertOrReplace、save、saveInTx、insertWithoutSettingPk",
 				"3、删除数据：delete、deleteAll、deleteByKey、deleteByKeyInTx、deleteInTx",
 				"4、更新数据：update、updateInTx、updateKeyAfterInsert",
-				"5、查询数据：where、whereOr、limit、offset、*order*、distinct、or、and",
-				"6、数据加载和缓存：load、loadByRowId、loadAll、detach、detachAll、unique",
-				"7、其他API：",
+				"5、查询数据：where、whereOr、limit、offset、*order*、distinct、or、and、queryRaw*",
+				"6、数据加载和缓存：load、loadByRowId、loadAll、detach、detachAll、unique、uniqueOrThrow",
+				"7、其他API：getKey、getPkProperty、getProperties、getPkColumns、getNonPkColumns",
 				"8、删除所有数据：deleteAll",
 				"tag 值 +1",};
 		setListAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, Arrays.asList(array)));
@@ -155,6 +155,7 @@ public class GreenDaoActivity extends ListActivity {
 	private void query() {
 		WhereCondition cond1 = NoteDao.Properties.Id.eq(1);//==
 		WhereCondition cond2 = NoteDao.Properties.Type.notEq(NoteTypeConverter.TYPE_UNKNOWN);//!=
+		//在构建查询时，必须使用数据库值类型。 因为我们使用转换器将枚举类型映射到 String 值，则应在查询中使用 String 值
 		WhereCondition cond3 = NoteDao.Properties.Id.gt(10);//大于
 		WhereCondition cond4 = NoteDao.Properties.Id.le(5);// less and eq 小于等于
 		WhereCondition cond5 = NoteDao.Properties.Id.in(1, 4, 10);//可以是集合。在某些值内，notIn	不在某些值内
@@ -162,9 +163,19 @@ public class GreenDaoActivity extends ListActivity {
 		// 最常用Like通配符：下划线_代替一个任意字符(相当于正则表达式中的 ?)   百分号%代替任意数目的任意字符(相当于正则表达式中的 *)
 		WhereCondition cond7 = NoteDao.Properties.Date.between(System.currentTimeMillis() - 1000 * 60 * 20, new Date());//20分钟
 		WhereCondition cond8 = NoteDao.Properties.Date.isNotNull();//isNull
+		WhereCondition cond9 = new WhereCondition.StringCondition(NoteDao.Properties.Id.columnName + ">=? ", 2L);
 		
+		//其他排序API：orderRaw(使用原生的SQL语句)、orderCustom、stringOrderCollation、preferLocalizedStringOrder
+		Property[] orders = new Property[]{NoteDao.Properties.Type, NoteDao.Properties.Date, NoteDao.Properties.Text};//同样支持可变参数
 		List<Note> list = null;
-		if (tag % 9 >= 6) {
+		
+		if (tag % 9 == 8) {
+			String where = "where " + NoteDao.Properties.Type.columnName + " like ? AND " + NoteDao.Properties.Id.columnName + ">=?";
+			list = dao.queryRaw(where, "%" + NoteTypeConverter.TYPE_TEXT + "%", Long.toString(2L));
+			Log.i("bqt", "queryRaw查询到的数据" + new Gson().toJson(list));
+			list = dao.queryRawCreate(where, "%" + NoteTypeConverter.TYPE_TEXT + "%", Long.toString(2L)).list();
+		} else if (tag % 9 == 7) list = dao.queryBuilder().where(cond9).build().list(); //执行原生的SQL查询语句
+		else if (tag % 9 == 6) {
 			QueryBuilder<Note> qb = dao.queryBuilder();
 			WhereCondition condOr = qb.or(cond2, cond3, cond4);
 			WhereCondition condAnd = qb.and(cond6, cond7, cond8);
@@ -173,9 +184,7 @@ public class GreenDaoActivity extends ListActivity {
 		else if (tag % 9 == 4) list = dao.queryBuilder().where(cond5, cond6, cond7).build().list();//多个语句间是 AND 的关系
 		else if (tag % 9 == 3) list = dao.queryBuilder().where(cond4).offset(1).limit(2).build().list();//(必须)与limit一起设置查询结果的偏移量
 		else if (tag % 9 == 2) list = dao.queryBuilder().where(cond5).limit(2).distinct().build().list();//限制查询结果个数，避免重复的实体(不明白)
-		else if (tag % 9 == 1) list = dao.queryBuilder().where(cond2)
-				.orderAsc(NoteDao.Properties.Type, NoteDao.Properties.Date, NoteDao.Properties.Text)//常用升序orderAsc、降序orderDesc
-				.build().list();//其他排序API：orderRaw(使用原生的SQL语句)、orderCustom、stringOrderCollation、preferLocalizedStringOrder
+		else if (tag % 9 == 1) list = dao.queryBuilder().where(cond2).orderAsc(orders).build().list(); //常用升序orderAsc、降序orderDesc
 		else if (tag % 9 == 0) list = dao.queryBuilder().build().list();
 		Log.i("bqt", getAllDataString() + "\n查询到的数据" + new Gson().toJson(list));
 	}
@@ -203,8 +212,9 @@ public class GreenDaoActivity extends ListActivity {
 		Note note1 = dao.load(1L);// 加载给定主键的实体
 		Note note2 = dao.load(10086L);//如果给定主键不存在则返回null
 		Note note3 = dao.loadByRowId(1L);// 加载某一行并返回该行的实体
-		Note note4 = dao.queryBuilder().limit(1).unique();//返回一个元素(可能为null)。要多次执行查询，应该保留query对象以提高效率
-		Note note5 = dao.queryBuilder().limit(1).build().unique();//和上面的操作是一样的。注意：如果查询结果数量不是1，则报 DaoException
+		Note note4 = dao.queryBuilder().limit(1).unique();//返回一个元素(可能为null)。如果查询结果数量不是0或1，则抛出DaoException
+		Note note5 = dao.queryBuilder().limit(1).build().uniqueOrThrow(); //保证返回一个非空的实体(否则会抛出一个 DaoException)
+		
 		if (tag % 9 >= 2) {
 			note1.setText("-------Text" + System.currentTimeMillis());
 			Log.i("bqt", dao.load(1L).getText());//因为这里获取到的实体对象仍然是 note1 ，所以这里的值立即就改变了！
@@ -212,14 +222,15 @@ public class GreenDaoActivity extends ListActivity {
 			Log.i("bqt", dao.load(1L).getText());//因为只更改了实体但没有调用更新数据库的方法，所以数据库中的数据并没有改变
 		} else if (tag % 9 == 1) {
 			dao.detach(note4);//清除指定实体缓存；dao.detachAll 清除当前表的所有实体缓存；daoSession.clear() 清除所有的实体缓存
-			Note note6 = dao.load(1L);// 清除指定Dao类的缓存后，再次得到的实体就是构造的新的对象
-			Log.i("bqt", (note1 == note3 && note1 == note4 && note1 == note5) + "  " + (note1 == note6));//true  false
+			Note note7 = dao.load(1L);// 清除指定Dao类的缓存后，再次得到的实体就是构造的新的对象
+			Log.i("bqt", (note1 == note3 && note1 == note4 && note1 == note5) + "  " + (note1 == note7));//true  false
 		} else if (tag % 9 == 0) {
 			Log.i("bqt", new Gson().toJson(Arrays.asList(note1, note2, note3, note4, note5)));
 		}
 	}
 	
 	private void testOtherApi() {
+		dao.save(mNote);//确保要更新的实体已存在
 		//查找指定实体的Key，当指定实体在数据库表中不存在时返回 null(而不是返回-1或其他值)
 		Log.i("bqt", "实体的 Key = " + dao.getKey(mNote) + "  " + dao.getKey(Note.newBuilder().text("text").build()));
 		
@@ -230,13 +241,12 @@ public class GreenDaoActivity extends ListActivity {
 		
 		Log.i("bqt", "所有的PK列：" + Arrays.toString(dao.getPkColumns()));//[_id]
 		Log.i("bqt", "所有的非PK列：" + Arrays.toString(dao.getNonPkColumns()));//[TEXT, TIME, TYPE]
-		
-		//执行原生的SQL查询语句
-		//List<Note> list = dao.queryRaw("select * from Note");
-		//Log.i("bqt", new Gson().toJson(list));
 	}
 	
 	private String getAllDataString() {
-		return " 个数：" + dao.count() + "，全部数据" + new Gson().toJson(dao.loadAll()); //loadAll() 等价于 queryBuilder().build().list()
+		List<Note> list1 = dao.queryBuilder().build().list();//缓存查询结果
+		List<Note> list2 = dao.queryBuilder().list();
+		List<Note> list3 = dao.loadAll();
+		return " 个数=" + dao.count() + "，等价=" + (list1.equals(list2) && list1.equals(list3)) + "，数据=" + new Gson().toJson(list1);//true
 	}
 }

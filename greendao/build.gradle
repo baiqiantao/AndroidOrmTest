@@ -41,3 +41,7 @@ dependencies {
     api 'org.greenrobot:greendao:3.2.2' //greendao
     implementation 'net.zetetic:android-database-sqlcipher:3.5.6'  //可选，如果需要加密数据库可以使用 sqlcipher
 }
+
+greendao {
+    schemaVersion 1 //数据库模式的当前版本，如果更改 实体/数据库 模式，则必须增加此值
+}
