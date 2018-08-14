@@ -34,7 +34,7 @@ public class GreenDaoActivity extends ListActivity {
 				"2、插入数据：insertInTx、insertOrReplace、save、saveInTx、insertWithoutSettingPk",
 				"3、删除数据：delete、deleteAll、deleteByKey、deleteByKeyInTx、deleteInTx",
 				"4、更新数据：update、updateInTx、updateKeyAfterInsert",
-				"5、查询数据：where、whereOr、limit、offset、*order*、distinct、or、and、queryRaw*",
+				"5、查询数据：where、whereOr、or、and、limit、offset、*order*、distinct、queryRaw*",
 				"6、数据加载和缓存：load、loadByRowId、loadAll、detach、detachAll、unique、uniqueOrThrow",
 				"7、其他API：getKey、getPkProperty、getProperties、getPkColumns、getNonPkColumns",
 				"8、删除所有数据：deleteAll",
