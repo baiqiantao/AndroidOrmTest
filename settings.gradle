@@ -1,1 +1,1 @@
-include ':app', ':litepal', ':greendao'
+include ':app', ':litepal', ':greendao', ':ormlite'
